@@ -9,6 +9,8 @@ Sistema de prueba con dos APIs REST y una funcion lambda para crear y confirmar 
 - **`lambda-orchestrator`** (Serverless Framework offline): llama a Customers + Orders usando un token de servicio compartido
 - **`db`**: esquema + datos de seed para MySQL local
 
+En `customers-api` y `orders-api` hay scripts NPM: `migrate`, `seed` (y `build`/`start` si se corre fuera de Docker). Ver `package.json` de cada uno.
+
 ## Puertos locales
 
 - **MySQL**: `3306`
@@ -114,7 +116,7 @@ En este repo, serverless-offline corre en **`3003`** para no chocar con Orders A
 
 ### 2) Auth del orquestador (opcional)
 
-Si `ORCHESTRATOR_TOKEN` está definido en `lambda-orchestrator/.env`, debes llamar al orquestador con:
+Si `ORCHESTRATOR_TOKEN` está definido en `lambda-orchestrator/.env`, llamar al orquestador con:
 
 - `Authorization: Bearer <ORCHESTRATOR_TOKEN>`
 
@@ -129,6 +131,16 @@ curl -X POST "http://localhost:3003/orchestrator/create-and-confirm-order" ^
   -d "{\"customer_id\":1,\"items\":[{\"product_id\":1,\"qty\":1}],\"idempotency_key\":\"demo-1\"}"
 ```
 
+Respuesta esperada (201): `success`, `correlationId` (si se envió) y `data` con `customer`, `order` e `items`.
+
+### 4) Exponer local con URL pública (opcional)
+
+Para invocar el orquestador desde otra máquina o con una URL pública: `ngrok http 3003`.
+
+### 5) Despliegue en AWS
+
+Desde `lambda-orchestrator/`: `npx serverless deploy`. Configurar `CUSTOMERS_API_BASE` y `ORDERS_API_BASE` en `.env` (o en el stage) con las URLs públicas de las APIs.
+
 ## OpenAPI (Swagger)
 
 La documentación Swagger está disponible directamente en cada servicio:
@@ -139,3 +151,11 @@ La documentación Swagger está disponible directamente en cada servicio:
 Tambien se puede ver los archivos YAML directamente:
 - `customers-api/openapi.yaml`
 - `orders-api/openapi.yaml`
+
+En AWS las rutas `/docs` siguen expuestas pero la documentación apunta a localhost, así que para probar contra lo desplegado conviene usar Postman.
+
+## Probar con Postman
+
+Colección y ambientes en: [b2b-orders-jelou](https://www.postman.com/jairparedes/workspace/b2b-orders-jelou).
+
+Hay dos ambientes: uno para servicios en **AWS** y otro para **local** (localhost). Levantar los servicios según este README, elegir el ambiente en Postman y ejecutar las peticiones.
