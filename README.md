@@ -159,3 +159,4 @@ En AWS las rutas `/docs` siguen expuestas pero la documentación apunta a localh
 Colección y ambientes en: [b2b-orders-jelou](https://www.postman.com/jairparedes/workspace/b2b-orders-jelou).
 
 Hay dos ambientes: uno para servicios en **AWS** y otro para **local** (localhost). Levantar los servicios según este README, elegir el ambiente en Postman y ejecutar las peticiones.
+<img width="1912" height="901" alt="image" src="https://github.com/user-attachments/assets/b4d955dc-5408-42d5-a267-08172fa5112e" />
