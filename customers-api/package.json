@@ -7,17 +7,21 @@
         "build": "tsc",
         "start": "node dist/src/index.js",
         "migrate": "tsx scripts/migrate.ts",
-        "seed": "tsx scripts/seed.ts"
+        "seed": "tsx scripts/seed.ts",
+        "hash-password": "node -e \"const b=require('bcrypt');const p=process.argv[1]||'operator123';console.log(b.hashSync(p,10));\""
     },
     "dependencies": {
+        "bcrypt": "^6.0.0",
         "dotenv": "^17.2.3",
         "express": "5.2.1",
         "fs": "^0.0.1-security",
+        "jsonwebtoken": "^9.0.3",
         "mysql2": "^3.16.3",
         "pino": "^10.3.0",
         "zod": "^4.3.6"
     },
     "devDependencies": {
+        "@types/bcrypt": "^6.0.0",
         "@types/cors": "^2.8.19",
         "@types/express": "^5.0.6",
         "@types/jsonwebtoken": "^9.0.10",

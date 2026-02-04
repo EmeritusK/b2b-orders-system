@@ -1,14 +1,17 @@
 import 'dotenv/config';
 import express from 'express';
+import authRouter from './features/auth/auth.controller';
 import customersRouter from './features/customers/customers.controller';
 import { errorHandler } from './middleware/error-handler';
+import { requireAuth } from './middleware/require-auth';
 
 const app = express();
 app.use(express.json());
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'customers-api' }));
 
-app.use(customersRouter);
+app.use('/auth', authRouter);
+app.use(requireAuth, customersRouter);
 
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
