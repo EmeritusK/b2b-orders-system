@@ -1,0 +1,29 @@
+{
+  "ServiceName": "b2b-customers-api",
+  "SourceConfiguration": {
+    "ImageRepository": {
+      "ImageIdentifier": "<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/b2b-customers-api:latest",
+      "ImageRepositoryType": "ECR",
+      "ImageConfiguration": {
+        "Port": "3001",
+        "RuntimeEnvironmentVariables": {
+          "NODE_ENV": "production",
+          "PORT": "3001",
+          "DATABASE_URL": "mysql://<USER>:<PASSWORD>@<RDS_HOST>:3306/<DB_NAME>",
+          "JWT_SECRET": "<JWT_SECRET>",
+          "SERVICE_TOKEN": "<SERVICE_TOKEN>",
+          "OPERATOR_EMAIL": "<OPERATOR_EMAIL>",
+          "OPERATOR_PASSWORD_HASH": "<BCRYPT_HASH>"
+        }
+      }
+    },
+    "AutoDeploymentsEnabled": false,
+    "AuthenticationConfiguration": {
+      "AccessRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/AppRunnerECRAccessRole"
+    }
+  },
+  "InstanceConfiguration": {
+    "Cpu": "0.25 vCPU",
+    "Memory": "0.5 GB"
+  }
+}
