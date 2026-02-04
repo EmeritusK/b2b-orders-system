@@ -21,4 +21,4 @@ COPY package*.json ./
 
 EXPOSE 3002
 
-CMD ["node", "dist/server.js"]
+CMD ["node", "dist/src/index.js"]
