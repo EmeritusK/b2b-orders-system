@@ -12,8 +12,8 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "serverless": "^4.18.2",
-    "serverless-offline": "^14.4.0"
+    "serverless": "^3.38.0",
+    "serverless-offline": "^13.7.0"
   }
 }
 
