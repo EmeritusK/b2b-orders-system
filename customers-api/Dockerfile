@@ -17,8 +17,9 @@ WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/openapi.yaml ./openapi.yaml
 COPY package*.json ./
 
 EXPOSE 3001
 
-CMD ["node", "dist/server.js"]
+CMD ["node", "dist/src/index.js"]

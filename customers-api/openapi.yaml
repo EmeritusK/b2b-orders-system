@@ -1,0 +1,352 @@
+openapi: 3.0.3
+info:
+  title: Customers API
+  version: 1.0.0
+  description: |
+    Gestión de clientes para el Sistema de Pedidos B2B.
+
+    Autenticación:
+    - Público: `POST /auth/login`
+    - El resto: `Authorization: Bearer <JWT>`
+    - Endpoints internos (`/internal/*`): aceptan JWT o el `SERVICE_TOKEN` compartido como bearer token.
+servers:
+  - url: http://localhost:3001
+tags:
+  - name: Salud
+  - name: Auth
+  - name: Clientes
+  - name: Interno
+
+paths:
+  /health:
+    get:
+      tags: [Salud]
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  service: { type: string, example: customers-api }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login (devuelve JWT)
+      description: |
+        Valida las credenciales del operador desde variables de entorno (`OPERATOR_EMAIL` + `OPERATOR_PASSWORD_HASH`) y devuelve un JWT.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              default:
+                value:
+                  email: ops@backoffice.local
+                  password: operator123
+      responses:
+        '200':
+          description: Token JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /customers:
+    get:
+      tags: [Clientes]
+      summary: Listar clientes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          description: Búsqueda de texto (nombre/email/teléfono)
+          schema: { type: string }
+        - name: cursor
+          in: query
+          description: Paginación por cursor (id)
+          schema: { type: integer, minimum: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Lista de clientes con nextCursor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomersListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Clientes]
+      summary: Crear cliente
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerRequest'
+            examples:
+              example:
+                value:
+                  name: Valeria Mendonza
+                  email: valeria.mendonza@gmail.com
+                  phone: +593-99-123-4567
+      responses:
+        '201':
+          description: Cliente creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /customers/{id}:
+    get:
+      tags: [Clientes]
+      summary: Obtener cliente por id
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: Cliente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Clientes]
+      summary: Actualizar cliente
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerRequest'
+            examples:
+              updatePhone:
+                value:
+                  phone: +593-96-345-6789
+      responses:
+        '200':
+          description: Cliente actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      tags: [Clientes]
+      summary: Eliminar cliente
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '204':
+          description: Eliminado
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /internal/customers/{id}:
+    get:
+      tags: [Interno]
+      summary: Consulta interna de cliente (SERVICE_TOKEN o JWT)
+      description: |
+        Usado por otros servicios (por ejemplo, Orders API y el orquestador).
+        Envia `Authorization: Bearer <SERVICE_TOKEN>` o un JWT normal.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: Cliente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Unauthorized:
+      description: Token ausente o inválido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missingAuth:
+              value: { error: Missing or invalid Authorization header }
+            invalidJwt:
+              value: { error: Invalid or expired token }
+
+    ValidationError:
+      description: Falló la validación de la request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalid:
+              value: { error: Validation error }
+
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            notFound:
+              value: { error: Customer not found }
+
+    Conflict:
+      description: Conflicto (email duplicado, etc.)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            emailExists:
+              value: { error: Email already exists }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        details:
+          nullable: true
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: JWT para usar como `Authorization: Bearer <token>`
+
+    Customer:
+      type: object
+      required: [id, name, email, phone, created_at]
+      properties:
+        id: { type: integer, example: 1 }
+        name: { type: string, example: Valeria Mendonza }
+        email: { type: string, format: email, example: valeria.mendonza@gmail.com }
+        phone: { type: string, nullable: true, example: "+593-99-123-4567" }
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-02-04T10:15:30.000Z"
+
+    CreateCustomerRequest:
+      type: object
+      required: [name, email]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        email: { type: string, format: email, maxLength: 255 }
+        phone: { type: string, maxLength: 50 }
+
+    UpdateCustomerRequest:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        email: { type: string, format: email, maxLength: 255 }
+        phone: { type: string, maxLength: 50 }
+
+    CustomersListResponse:
+      type: object
+      required: [customers, nextCursor]
+      properties:
+        customers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Customer'
+        nextCursor:
+          type: integer
+          nullable: true
+          description: Enviar como `cursor` para pedir la siguiente página
+
