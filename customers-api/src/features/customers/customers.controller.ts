@@ -26,10 +26,6 @@ class HttpError extends Error {
   }
 }
 
-function isZodError(err: unknown): err is z.ZodError {
-  return err instanceof z.ZodError;
-}
-
 function isDupEmailError(err: unknown): boolean {
   return typeof err === 'object' && err !== null && 'code' in err && (err as any).code === 'ER_DUP_ENTRY';
 }
@@ -40,17 +36,6 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown): T {
     throw new HttpError(400, 'Validation error', parsed.error.flatten());
   }
   return parsed.data;
-}
-
-
-function requireServiceToken(req: Request, res: Response, next: NextFunction) {
-  const auth = req.headers.authorization;
-  const token = process.env.SERVICE_TOKEN;
-
-  if (!token || auth !== `Bearer ${token}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  next();
 }
 
 router.post(
@@ -128,7 +113,6 @@ router.delete(
 
 router.get(
   '/internal/customers/:id',
-  requireServiceToken,
   asyncWrap(async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id) || id <= 0) throw new HttpError(400, 'Invalid id');
