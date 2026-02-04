@@ -69,6 +69,24 @@ module.exports.createAndConfirm = async (event) => {
       headers: { Authorization: `Bearer ${serviceToken}` },
     });
 
+    const existingOrder = await fetchJson(
+      `${ordersBase}/orders/by-idempotency-key/${encodeURIComponent(data.idempotency_key)}`,
+      {
+        headers: { Authorization: `Bearer ${serviceToken}` },
+      }
+    ).catch(() => null);
+
+    if (existingOrder && existingOrder.id) {
+      return json(200, {
+        success: true,
+        correlationId: data.correlation_id ?? null,
+        data: {
+          customer,
+          order: existingOrder,
+        },
+      });
+    }
+
     const orderCreated = await fetchJson(`${ordersBase}/orders`, {
       method: 'POST',
       headers: {
