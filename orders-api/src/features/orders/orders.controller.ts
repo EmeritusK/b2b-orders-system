@@ -99,4 +99,16 @@ router.post(
   })
 );
 
+router.get(
+  '/orders/by-idempotency-key/:key',
+  asyncWrap(async (req, res) => {
+    const keyParam = req.params.key;
+    const key = typeof keyParam === 'string' ? keyParam.trim() : '';
+    if (!key) throw new HttpError(400, 'Idempotency key is required');
+    const order = await ordersService.getOrderByIdempotencyKey(key);
+    if (!order) throw new HttpError(404, 'Order not found for this idempotency key');
+    return res.json(order);
+  })
+);
+
 export default router;
