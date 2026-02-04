@@ -7,11 +7,15 @@ import productsRouter from './features/products/products.controller';
 import ordersRouter from './features/orders/orders.controller';
 import { errorHandler } from './middleware/error-handler';
 import { requireAuth } from './middleware/require-auth';
+import { logger } from './lib/logger';
 
 const app = express();
 app.use(express.json());
 
-app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'orders-api' }));
+app.get('/health', (_req, res) => {
+  logger.info({ path: '/health' }, 'health check');
+  res.json({ status: 'ok', service: 'orders-api' });
+});
 
 const swaggerDocument = YAML.load(join(__dirname, '../../openapi.yaml'));
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));

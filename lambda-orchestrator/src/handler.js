@@ -34,7 +34,15 @@ function requireOrchestratorAuth(event) {
 }
 
 async function fetchJson(url, init) {
-  const res = await fetch(url, init);
+  let res;
+  try {
+    res = await fetch(url, init);
+  } catch (fetchErr) {
+    const err = new Error(`Fetch failed: ${fetchErr.message}`);
+    err.statusCode = 502;
+    err.details = { url, cause: fetchErr.message };
+    throw err;
+  }
   const text = await res.text();
   let parsed = null;
   try {
@@ -61,8 +69,12 @@ module.exports.createAndConfirm = async (event) => {
     const customersBase = (process.env.CUSTOMERS_API_BASE || '').replace(/\/$/, '');
     const ordersBase = (process.env.ORDERS_API_BASE || '').replace(/\/$/, '');
     const serviceToken = process.env.SERVICE_TOKEN;
+    console.log('Orchestrator env', { customersBase, ordersBase, hasServiceToken: !!serviceToken });
     if (!customersBase || !ordersBase || !serviceToken) {
-      return json(500, { error: 'Missing env: CUSTOMERS_API_BASE, ORDERS_API_BASE, SERVICE_TOKEN' });
+      return json(500, {
+        error: 'Missing env: CUSTOMERS_API_BASE, ORDERS_API_BASE, SERVICE_TOKEN',
+        details: { customersBase: customersBase || null, ordersBase: ordersBase || null },
+      });
     }
 
     const customer = await fetchJson(`${customersBase}/internal/customers/${data.customer_id}`, {
@@ -121,6 +133,7 @@ module.exports.createAndConfirm = async (event) => {
     const statusCode = err?.statusCode || (err?.name === 'ZodError' ? 400 : 500);
     const payload = { error: err?.message || 'Internal error' };
     if (err?.details) payload.details = err.details;
+    console.error('Orchestrator error', { message: err?.message, details: err?.details, stack: err?.stack });
     return json(statusCode, payload);
   }
 };

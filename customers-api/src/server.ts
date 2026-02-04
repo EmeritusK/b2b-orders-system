@@ -7,11 +7,15 @@ import authRouter from './features/auth/auth.controller';
 import customersRouter from './features/customers/customers.controller';
 import { errorHandler } from './middleware/error-handler';
 import { requireAuth } from './middleware/require-auth';
+import { logger } from './lib/logger';
 
 const app = express();
 app.use(express.json());
 
-app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'customers-api' }));
+app.get('/health', (_req, res) => {
+  logger.info({ path: '/health' }, 'health check');
+  res.json({ status: 'ok', service: 'customers-api' });
+});
 
 const swaggerDocument = YAML.load(join(__dirname, '../../openapi.yaml'));
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));

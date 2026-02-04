@@ -5,13 +5,13 @@ frameworkVersion: '3'
 
 provider:
   name: aws
-  runtime: nodejs22.x
+  runtime: nodejs20.x
   region: us-east-1
   stage: ${opt:stage, 'dev'}
   environment:
-    CUSTOMERS_API_BASE: ${env:CUSTOMERS_API_BASE, 'http://localhost:3001'}
-    ORDERS_API_BASE: ${env:ORDERS_API_BASE, 'http://localhost:3002'}
-    SERVICE_TOKEN: ${env:SERVICE_TOKEN, ''}
+    CUSTOMERS_API_BASE: ${self:custom.apiBases.${self:provider.stage}.customers}
+    ORDERS_API_BASE: ${self:custom.apiBases.${self:provider.stage}.orders}
+    SERVICE_TOKEN: ${env:SERVICE_TOKEN, self:custom.serviceTokens.${self:provider.stage}}
     ORCHESTRATOR_TOKEN: ${env:ORCHESTRATOR_TOKEN, ''}
 
 plugins:
@@ -20,12 +20,24 @@ plugins:
 functions:
   orchestrate:
     handler: src/handler.createAndConfirm
+    timeout: 30
+    vpc: null
     events:
       - httpApi:
           method: POST
           path: /orchestrator/create-and-confirm-order
 
 custom:
+  apiBases:
+    dev:
+      customers: http://localhost:3001
+      orders: http://localhost:3002
+    prod:
+      customers: https://qaiiu8prck.us-east-1.awsapprunner.com
+      orders: https://jgajaysut2.us-east-1.awsapprunner.com
+  serviceTokens:
+    dev: internal-service-secret-token
+    prod: internal-service-secret-token-2026
   serverless-offline:
     httpPort: 3003
     lambdaPort: 3004
