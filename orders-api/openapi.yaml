@@ -1,0 +1,497 @@
+openapi: 3.0.3
+info:
+  title: Orders API
+  version: 1.0.0
+  description: |
+    API de pedidos + productos para el Sistema de Pedidos B2B.
+    Todas las rutas requieren `Authorization: Bearer <token>`.
+
+    Opciones de token:
+    - Un JWT normal (emitido por Customers API)
+    - O el `SERVICE_TOKEN` compartido (útil para llamadas entre servicios)
+servers:
+  - url: http://localhost:3002
+tags:
+  - name: Salud
+  - name: Productos
+  - name: Pedidos
+
+paths:
+  /health:
+    get:
+      tags: [Salud]
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  service: { type: string, example: orders-api }
+
+  /products:
+    get:
+      tags: [Productos]
+      summary: Listar productos
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: cursor
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Lista de productos con nextCursor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductsListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Productos]
+      summary: Crear producto
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+            examples:
+              example:
+                value:
+                  sku: SKU-EC-005
+                  name: Quinua Real
+                  price_cents: 12000
+                  stock: 50
+      responses:
+        '201':
+          description: Producto creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /products/{id}:
+    get:
+      tags: [Productos]
+      summary: Obtener producto por id
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: Producto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Productos]
+      summary: Actualizar parcialmente producto (precio/stock)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchProductRequest'
+            examples:
+              restock:
+                value:
+                  stock: 200
+      responses:
+        '200':
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /orders:
+    get:
+      tags: [Pedidos]
+      summary: Listar pedidos
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [CREATED, CONFIRMED, CANCELED]
+        - name: from
+          in: query
+          description: Fecha/hora ISO (inclusive)
+          schema: { type: string }
+        - name: to
+          in: query
+          description: Fecha/hora ISO (inclusive)
+          schema: { type: string }
+        - name: cursor
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Lista de pedidos con nextCursor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrdersListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Pedidos]
+      summary: Crear pedido
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+            examples:
+              example:
+                value:
+                  customer_id: 1
+                  items:
+                    - product_id: 1
+                      qty: 2
+      responses:
+        '201':
+          description: Pedido creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderWithItems'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /orders/{id}:
+    get:
+      tags: [Pedidos]
+      summary: Obtener pedido por id
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: Pedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderWithItems'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /orders/by-idempotency-key/{key}:
+    get:
+      tags: [Pedidos]
+      summary: Obtener pedido confirmado por idempotency key
+      description: |
+        Busca un pedido ya confirmado usando su idempotency key.
+        Útil para verificar si una operación ya se completó antes de crear un pedido nuevo.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Pedido confirmado encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderWithItems'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /orders/{id}/confirm:
+    post:
+      tags: [Pedidos]
+      summary: Confirmar pedido
+      description: |
+        Requiere un header de idempotencia para proteger reintentos.
+        Si reutilizas la misma key, deberías obtener el mismo resultado.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - name: X-Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Pedido confirmado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderWithItems'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /orders/{id}/cancel:
+    post:
+      tags: [Pedidos]
+      summary: Cancelar pedido
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: Pedido actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderWithItems'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Unauthorized:
+      description: Token ausente o inválido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missing:
+              value: { error: Missing or invalid Authorization header }
+            invalid:
+              value: { error: Invalid or expired token }
+
+    ValidationError:
+      description: Falló la validación de la request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalid:
+              value: { error: Validation error }
+
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            order:
+              value: { error: Order not found }
+            product:
+              value: { error: Product not found }
+
+    Conflict:
+      description: Conflicto (SKU duplicado, stock insuficiente, estado inválido, etc.)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            sku:
+              value: { error: SKU already exists }
+            stock:
+              value: { error: Insufficient stock for product 1 }
+            state:
+              value: { error: Order cannot be confirmed }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        details:
+          nullable: true
+
+    Product:
+      type: object
+      required: [id, sku, name, price_cents, stock, created_at]
+      properties:
+        id: { type: integer, example: 1 }
+        sku: { type: string, example: SKU-EC-001 }
+        name: { type: string, example: Chocolate Pacari }
+        price_cents: { type: integer, example: 35000 }
+        stock: { type: integer, example: 150 }
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-02-04T10:15:30.000Z"
+
+    CreateProductRequest:
+      type: object
+      required: [sku, name, price_cents]
+      properties:
+        sku: { type: string, minLength: 1, maxLength: 100 }
+        name: { type: string, minLength: 1, maxLength: 255 }
+        price_cents: { type: integer, minimum: 0 }
+        stock: { type: integer, minimum: 0, default: 0 }
+
+    PatchProductRequest:
+      type: object
+      properties:
+        price_cents: { type: integer, minimum: 0 }
+        stock: { type: integer, minimum: 0 }
+
+    ProductsListResponse:
+      type: object
+      required: [products, nextCursor]
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        nextCursor:
+          type: integer
+          nullable: true
+
+    OrderItem:
+      type: object
+      required: [product_id, qty, unit_price_cents, subtotal_cents]
+      properties:
+        product_id: { type: integer, example: 1 }
+        qty: { type: integer, example: 2 }
+        unit_price_cents: { type: integer, example: 35000 }
+        subtotal_cents: { type: integer, example: 70000 }
+
+    OrderWithItems:
+      type: object
+      required: [id, customer_id, status, total_cents, created_at, items]
+      properties:
+        id: { type: integer, example: 10 }
+        customer_id: { type: integer, example: 1 }
+        status:
+          type: string
+          enum: [CREATED, CONFIRMED, CANCELED]
+          example: CONFIRMED
+        total_cents: { type: integer, example: 70000 }
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-02-04T10:15:30.000Z"
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+
+    CreateOrderRequest:
+      type: object
+      required: [customer_id, items]
+      properties:
+        customer_id: { type: integer, minimum: 1 }
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [product_id, qty]
+            properties:
+              product_id: { type: integer, minimum: 1 }
+              qty: { type: integer, minimum: 1 }
+
+    OrdersListResponse:
+      type: object
+      required: [orders, nextCursor]
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderWithItems'
+        nextCursor:
+          type: integer
+          nullable: true

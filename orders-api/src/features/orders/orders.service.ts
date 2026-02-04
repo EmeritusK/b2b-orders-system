@@ -204,6 +204,26 @@ export async function confirmOrder(
   }
 }
 
+export async function getOrderByIdempotencyKey(
+  idempotencyKey: string
+): Promise<(Order & { items: OrderItem[] }) | null> {
+  const key = idempotencyKey.trim();
+  if (!key) return null;
+
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT status, response_body FROM idempotency_keys 
+     WHERE \`key\` = ? AND target_type = 'ORDER_CONFIRMATION' AND status = 'COMPLETED' 
+     AND response_body IS NOT NULL LIMIT 1`,
+    [key]
+  );
+
+  if (rows.length === 0) return null;
+
+  const body = rows[0].response_body;
+  const order = typeof body === 'string' ? JSON.parse(body) : body;
+  return order as Order & { items: OrderItem[] };
+}
+
 export async function cancelOrder(orderId: number): Promise<Order & { items: OrderItem[] } | null> {
   const orderWithItems = await getById(orderId);
   if (!orderWithItems) return null;
