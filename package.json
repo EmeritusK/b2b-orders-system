@@ -1,0 +1,42 @@
+{
+  "name": "b2b-orders-system",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "customers-api",
+    "orders-api",
+    "lambda-orchestrator"
+  ],
+  "scripts": {
+    "lint": "eslint . --ext .ts,.js",
+    "format": "prettier --write \"**/*.{ts,js,json,md}\"",
+    "prepare": "husky install",
+    "test": "jest",
+    "test:cov": "jest --coverage"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/supertest": "^7.2.1",
+    "@typescript-eslint/eslint-plugin": "^7.1.0",
+    "@typescript-eslint/parser": "^7.1.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "husky": "^8.0.3",
+    "jest": "^30.5.2",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.2.5",
+    "supertest": "^7.3.0",
+    "ts-jest": "^29.4.13",
+    "typescript": "^5.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  }
+}

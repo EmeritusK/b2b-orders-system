@@ -10,7 +10,6 @@ import * as customersService from './customers.service';
 
 const router = Router();
 
-
 const asyncWrap =
   (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) =>
   (req: Request, res: Response, next: NextFunction) =>
@@ -20,14 +19,16 @@ class HttpError extends Error {
   constructor(
     public status: number,
     message: string,
-    public details?: unknown
+    public details?: unknown,
   ) {
     super(message);
   }
 }
 
 function isDupEmailError(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && 'code' in err && (err as any).code === 'ER_DUP_ENTRY';
+  return (
+    typeof err === 'object' && err !== null && 'code' in err && (err as any).code === 'ER_DUP_ENTRY'
+  );
 }
 
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown): T {
@@ -47,12 +48,15 @@ router.post(
       const customer = await customersService.createCustomer(data);
       return res.status(201).json(customer);
     } catch (err: unknown) {
-      if (isDupEmailError(err) || (err instanceof Error && err.message.includes('email ya existe'))) {
+      if (
+        isDupEmailError(err) ||
+        (err instanceof Error && err.message.includes('email ya existe'))
+      ) {
         throw new HttpError(409, 'Email already exists');
       }
       throw err;
     }
-  })
+  }),
 );
 
 router.get(
@@ -65,7 +69,7 @@ router.get(
     if (!customer) throw new HttpError(404, 'Customer not found');
 
     return res.json(customer);
-  })
+  }),
 );
 
 router.get(
@@ -74,7 +78,7 @@ router.get(
     const query = parseOrThrow(listCustomersQuerySchema, req.query);
     const { customers, nextCursor } = await customersService.listCustomers(query);
     return res.json({ customers, nextCursor });
-  })
+  }),
 );
 
 router.put(
@@ -90,12 +94,15 @@ router.put(
       if (!customer) throw new HttpError(404, 'Customer not found');
       return res.json(customer);
     } catch (err: unknown) {
-      if (isDupEmailError(err) || (err instanceof Error && err.message.includes('email ya existe'))) {
+      if (
+        isDupEmailError(err) ||
+        (err instanceof Error && err.message.includes('email ya existe'))
+      ) {
         throw new HttpError(409, 'Email already exists');
       }
       throw err;
     }
-  })
+  }),
 );
 
 router.delete(
@@ -108,7 +115,7 @@ router.delete(
     if (!deleted) throw new HttpError(404, 'Customer not found');
 
     return res.status(204).send();
-  })
+  }),
 );
 
 router.get(
@@ -121,8 +128,7 @@ router.get(
     if (!customer) throw new HttpError(404, 'Customer not found');
 
     return res.json(customer);
-  })
+  }),
 );
-
 
 export default router;

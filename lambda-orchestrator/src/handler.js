@@ -7,7 +7,7 @@ const requestSchema = z.object({
       z.object({
         product_id: z.coerce.number().int().positive(),
         qty: z.coerce.number().int().min(1),
-      })
+      }),
     )
     .min(1),
   idempotency_key: z.string().trim().min(1),
@@ -62,7 +62,9 @@ module.exports.createAndConfirm = async (event) => {
     const ordersBase = (process.env.ORDERS_API_BASE || '').replace(/\/$/, '');
     const serviceToken = process.env.SERVICE_TOKEN;
     if (!customersBase || !ordersBase || !serviceToken) {
-      return json(500, { error: 'Missing env: CUSTOMERS_API_BASE, ORDERS_API_BASE, SERVICE_TOKEN' });
+      return json(500, {
+        error: 'Missing env: CUSTOMERS_API_BASE, ORDERS_API_BASE, SERVICE_TOKEN',
+      });
     }
 
     const customer = await fetchJson(`${customersBase}/internal/customers/${data.customer_id}`, {
@@ -73,7 +75,7 @@ module.exports.createAndConfirm = async (event) => {
       `${ordersBase}/orders/by-idempotency-key/${encodeURIComponent(data.idempotency_key)}`,
       {
         headers: { Authorization: `Bearer ${serviceToken}` },
-      }
+      },
     ).catch(() => null);
 
     if (existingOrder && existingOrder.id) {
@@ -124,4 +126,3 @@ module.exports.createAndConfirm = async (event) => {
     return json(statusCode, payload);
   }
 };
-

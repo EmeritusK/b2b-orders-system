@@ -3,7 +3,11 @@ import { z } from 'zod';
 import { logger } from '../lib/logger';
 
 export class HttpError extends Error {
-  constructor(public status: number, message: string, public details?: unknown) {
+  constructor(
+    public status: number,
+    message: string,
+    public details?: unknown,
+  ) {
     super(message);
   }
 }
@@ -22,7 +26,10 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     });
   }
 
-  logger.error({ err, path: req.path }, err instanceof Error ? err.message : 'Internal Server Error');
+  logger.error(
+    { err, path: req.path },
+    err instanceof Error ? err.message : 'Internal Server Error',
+  );
   const message = err instanceof Error ? err.message : 'Internal Server Error';
   return res.status(500).json({ error: message });
 }

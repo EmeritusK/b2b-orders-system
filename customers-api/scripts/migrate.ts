@@ -12,10 +12,13 @@ async function main() {
   const schemaPath = path.join(process.cwd(), '..', 'db', 'schema.sql');
   const sql = fs.readFileSync(schemaPath, 'utf-8');
   const conn = await mysql.createConnection({
-    uri: DATABASE_URL as any, 
+    uri: DATABASE_URL as any,
     multipleStatements: true,
   } as any);
-  const statements = sql.split(';').map((s) => s.trim()).filter(Boolean);
+  const statements = sql
+    .split(';')
+    .map((s) => s.trim())
+    .filter(Boolean);
   for (const stmt of statements) {
     if (stmt) await conn.query(stmt);
   }

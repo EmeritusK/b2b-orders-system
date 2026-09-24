@@ -15,7 +15,10 @@ async function main() {
     uri: DATABASE_URL,
     multipleStatements: true,
   } as mysql.ConnectionOptions);
-  const statements = sql.split(';').map((s) => s.trim()).filter(Boolean);
+  const statements = sql
+    .split(';')
+    .map((s) => s.trim())
+    .filter(Boolean);
   for (const stmt of statements) {
     if (stmt) await conn.query(stmt);
   }

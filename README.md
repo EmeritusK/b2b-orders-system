@@ -23,7 +23,7 @@ En `customers-api` y `orders-api` hay scripts NPM: `migrate`, `seed` (y `build`/
 - **Docker Desktop**
 - **Node.js 22+**
 
-El orquestador usa **Serverless Framework v3**, ya que la v4 obliga crear a crear una cuenta para configurar una licencia solo para probar el sistema.  
+El orquestador usa **Serverless Framework v3**, ya que la v4 obliga crear a crear una cuenta para configurar una licencia solo para probar el sistema.
 
 ## Inicio del proyecto (servicios en Docker)
 
@@ -149,6 +149,7 @@ La documentación Swagger está disponible directamente en cada servicio:
 - **Orders API**: `http://localhost:3002/docs`
 
 Tambien se puede ver los archivos YAML directamente:
+
 - `customers-api/openapi.yaml`
 - `orders-api/openapi.yaml`
 
