@@ -62,17 +62,23 @@ export async function createOrder(data: CreateOrderInput): Promise<OrderWithItem
     const placeholders = productIds.map(() => '?').join(',');
     const [productRows] = await conn.execute<RowDataPacket[]>(
       `SELECT id, price_cents, stock FROM products WHERE id IN (${placeholders})`,
-      productIds
+      productIds,
     );
     const productMap = new Map(
-      (productRows as { id: number; price_cents: number; stock: number }[]).map((p) => [p.id, p])
+      (productRows as { id: number; price_cents: number; stock: number }[]).map((p) => [p.id, p]),
     );
     let totalCents = 0;
-    const orderItems: { product_id: number; qty: number; unit_price_cents: number; subtotal_cents: number }[] = [];
+    const orderItems: {
+      product_id: number;
+      qty: number;
+      unit_price_cents: number;
+      subtotal_cents: number;
+    }[] = [];
     for (const item of data.items) {
       const product = productMap.get(item.product_id);
       if (!product) throw new Error(`Product ${item.product_id} not found`);
-      if (product.stock < item.qty) throw new Error(`Insufficient stock for product ${item.product_id}`);
+      if (product.stock < item.qty)
+        throw new Error(`Insufficient stock for product ${item.product_id}`);
       const subtotal = product.price_cents * item.qty;
       totalCents += subtotal;
       orderItems.push({
@@ -84,15 +90,18 @@ export async function createOrder(data: CreateOrderInput): Promise<OrderWithItem
     }
     const [orderResult] = await conn.execute<ResultSetHeader>(
       'INSERT INTO orders (customer_id, status, total_cents) VALUES (?, ?, ?)',
-      [data.customer_id, 'CREATED', totalCents]
+      [data.customer_id, 'CREATED', totalCents],
     );
     const orderId = orderResult.insertId;
     for (const oi of orderItems) {
       await conn.execute(
         'INSERT INTO order_items (order_id, product_id, qty, unit_price_cents, subtotal_cents) VALUES (?, ?, ?, ?, ?)',
-        [orderId, oi.product_id, oi.qty, oi.unit_price_cents, oi.subtotal_cents]
+        [orderId, oi.product_id, oi.qty, oi.unit_price_cents, oi.subtotal_cents],
       );
-      await conn.execute('UPDATE products SET stock = stock - ? WHERE id = ?', [oi.qty, oi.product_id]);
+      await conn.execute('UPDATE products SET stock = stock - ? WHERE id = ?', [
+        oi.qty,
+        oi.product_id,
+      ]);
     }
     await conn.commit();
     const order = await getById(orderId);
@@ -109,20 +118,20 @@ export async function createOrder(data: CreateOrderInput): Promise<OrderWithItem
 export async function getById(id: number): Promise<(Order & { items: OrderItem[] }) | null> {
   const [orderRows] = await pool.execute<OrderRow[]>(
     'SELECT id, customer_id, status, total_cents, created_at FROM orders WHERE id = ? LIMIT 1',
-    [id]
+    [id],
   );
   if (orderRows.length === 0) return null;
   const order = rowToOrder(orderRows[0]);
   const [itemRows] = await pool.execute<OrderItemRow[]>(
     'SELECT id, order_id, product_id, qty, unit_price_cents, subtotal_cents FROM order_items WHERE order_id = ?',
-    [id]
+    [id],
   );
   const items = itemRows.map(rowToOrderItem);
   return { ...order, items };
 }
 
 export async function listOrders(
-  query: ListOrdersQuery
+  query: ListOrdersQuery,
 ): Promise<{ orders: Order[]; nextCursor: string | null }> {
   const { status, from, to, cursor, limit } = query;
   let sql = 'SELECT id, customer_id, status, total_cents, created_at FROM orders WHERE 1=1';
@@ -155,14 +164,14 @@ export async function listOrders(
 
 export async function confirmOrder(
   orderId: number,
-  idempotencyKey: string
+  idempotencyKey: string,
 ): Promise<{ order: Order & { items: OrderItem[] }; fromCache: boolean }> {
   const key = idempotencyKey.trim();
   if (!key) throw new Error('X-Idempotency-Key is required');
 
   const [existing] = await pool.execute<RowDataPacket[]>(
     'SELECT status, response_body FROM idempotency_keys WHERE `key` = ? LIMIT 1',
-    [key]
+    [key],
   );
   if (existing.length > 0) {
     const row = existing[0];
@@ -183,7 +192,7 @@ export async function confirmOrder(
     `INSERT INTO idempotency_keys (\`key\`, target_type, target_id, status, response_body, expires_at)
      VALUES (?, 'ORDER_CONFIRMATION', ?, 'PROCESSING', NULL, ?)
      ON DUPLICATE KEY UPDATE status = 'PROCESSING'`,
-    [key, orderId, expiresAt]
+    [key, orderId, expiresAt],
   );
 
   try {
@@ -192,20 +201,17 @@ export async function confirmOrder(
     if (!updated) throw new Error('Order not found');
     await pool.execute(
       `UPDATE idempotency_keys SET status = 'COMPLETED', response_body = ? WHERE \`key\` = ?`,
-      [JSON.stringify(updated), key]
+      [JSON.stringify(updated), key],
     );
     return { order: updated, fromCache: false };
   } catch (err) {
-    await pool.execute(
-      `UPDATE idempotency_keys SET status = 'FAILED' WHERE \`key\` = ?`,
-      [key]
-    );
+    await pool.execute(`UPDATE idempotency_keys SET status = 'FAILED' WHERE \`key\` = ?`, [key]);
     throw err;
   }
 }
 
 export async function getOrderByIdempotencyKey(
-  idempotencyKey: string
+  idempotencyKey: string,
 ): Promise<(Order & { items: OrderItem[] }) | null> {
   const key = idempotencyKey.trim();
   if (!key) return null;
@@ -214,7 +220,7 @@ export async function getOrderByIdempotencyKey(
     `SELECT status, response_body FROM idempotency_keys 
      WHERE \`key\` = ? AND target_type = 'ORDER_CONFIRMATION' AND status = 'COMPLETED' 
      AND response_body IS NOT NULL LIMIT 1`,
-    [key]
+    [key],
   );
 
   if (rows.length === 0) return null;
@@ -224,14 +230,17 @@ export async function getOrderByIdempotencyKey(
   return order as Order & { items: OrderItem[] };
 }
 
-export async function cancelOrder(orderId: number): Promise<Order & { items: OrderItem[] } | null> {
+export async function cancelOrder(
+  orderId: number,
+): Promise<(Order & { items: OrderItem[] }) | null> {
   const orderWithItems = await getById(orderId);
   if (!orderWithItems) return null;
   if (orderWithItems.status === 'CANCELED') return orderWithItems;
 
   if (orderWithItems.status === 'CONFIRMED') {
     const elapsed = Date.now() - orderWithItems.created_at.getTime();
-    if (elapsed > CONFIRMED_CANCEL_WINDOW_MS) throw new Error('Cannot cancel CONFIRMED order after 10 minutes');
+    if (elapsed > CONFIRMED_CANCEL_WINDOW_MS)
+      throw new Error('Cannot cancel CONFIRMED order after 10 minutes');
   }
 
   const conn = await pool.getConnection();
@@ -240,7 +249,10 @@ export async function cancelOrder(orderId: number): Promise<Order & { items: Ord
     await conn.execute('UPDATE orders SET status = ? WHERE id = ?', ['CANCELED', orderId]);
     if (orderWithItems.items?.length) {
       for (const item of orderWithItems.items) {
-        await conn.execute('UPDATE products SET stock = stock + ? WHERE id = ?', [item.qty, item.product_id]);
+        await conn.execute('UPDATE products SET stock = stock + ? WHERE id = ?', [
+          item.qty,
+          item.product_id,
+        ]);
       }
     }
     await conn.commit();

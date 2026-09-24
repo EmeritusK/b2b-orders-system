@@ -13,4 +13,3 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
   return requireJwt(req, res, next);
 }
-

@@ -11,7 +11,11 @@ const asyncWrap =
     Promise.resolve(fn(req, res, next)).catch(next);
 
 class HttpError extends Error {
-  constructor(public status: number, message: string, public details?: unknown) {
+  constructor(
+    public status: number,
+    message: string,
+    public details?: unknown,
+  ) {
     super(message);
   }
 }
@@ -32,7 +36,7 @@ router.post(
     }
     const token = issueToken(data.email);
     return res.json({ token });
-  })
+  }),
 );
 
 export default router;

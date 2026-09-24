@@ -19,9 +19,7 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use('/auth', authRouter);
 app.use(requireAuth, customersRouter);
 
-
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
-
 
 app.use(errorHandler);
 

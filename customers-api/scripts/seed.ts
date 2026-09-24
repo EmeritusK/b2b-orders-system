@@ -13,7 +13,7 @@ async function main() {
   const sql = fs.readFileSync(seedPath, 'utf-8');
 
   const conn = await mysql.createConnection({
-    uri: DATABASE_URL as any, 
+    uri: DATABASE_URL as any,
     multipleStatements: true,
   } as any);
 

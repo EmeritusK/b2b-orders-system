@@ -1,10 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
-import {
-  createProductSchema,
-  patchProductSchema,
-  listProductsQuerySchema,
-} from './products.types';
+import { createProductSchema, patchProductSchema, listProductsQuerySchema } from './products.types';
 import * as productsService from './products.service';
 
 const router = Router();
@@ -15,7 +11,11 @@ const asyncWrap =
     Promise.resolve(fn(req, res, next)).catch(next);
 
 class HttpError extends Error {
-  constructor(public status: number, message: string, public details?: unknown) {
+  constructor(
+    public status: number,
+    message: string,
+    public details?: unknown,
+  ) {
     super(message);
   }
 }
@@ -34,10 +34,11 @@ router.post(
       const product = await productsService.createProduct(data);
       return res.status(201).json(product);
     } catch (err: unknown) {
-      if (err instanceof Error && err.message === 'SKU already exists') throw new HttpError(409, 'SKU already exists');
+      if (err instanceof Error && err.message === 'SKU already exists')
+        throw new HttpError(409, 'SKU already exists');
       throw err;
     }
-  })
+  }),
 );
 
 router.get(
@@ -48,7 +49,7 @@ router.get(
     const product = await productsService.getById(id);
     if (!product) throw new HttpError(404, 'Product not found');
     return res.json(product);
-  })
+  }),
 );
 
 router.get(
@@ -57,7 +58,7 @@ router.get(
     const query = parseOrThrow(listProductsQuerySchema, req.query);
     const { products, nextCursor } = await productsService.listProducts(query);
     return res.json({ products, nextCursor });
-  })
+  }),
 );
 
 router.patch(
@@ -69,7 +70,7 @@ router.patch(
     const product = await productsService.patchProduct(id, data);
     if (!product) throw new HttpError(404, 'Product not found');
     return res.json(product);
-  })
+  }),
 );
 
 export default router;

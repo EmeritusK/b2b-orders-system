@@ -1,6 +1,11 @@
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { pool } from '../../lib/db';
-import type { CreateCustomerInput, UpdateCustomerInput, ListCustomersQuery, Customer } from './customers.types';
+import type {
+  CreateCustomerInput,
+  UpdateCustomerInput,
+  ListCustomersQuery,
+  Customer,
+} from './customers.types';
 
 type CustomerRow = RowDataPacket & {
   id: number;
@@ -21,14 +26,16 @@ function rowToCustomer(row: CustomerRow): Customer {
 }
 
 function isDupEmailError(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && 'code' in err && (err as any).code === 'ER_DUP_ENTRY';
+  return (
+    typeof err === 'object' && err !== null && 'code' in err && (err as any).code === 'ER_DUP_ENTRY'
+  );
 }
 
 export async function createCustomer(data: CreateCustomerInput): Promise<Customer> {
   try {
     const [result] = await pool.execute<ResultSetHeader>(
       'INSERT INTO customers (name, email, phone) VALUES (?, ?, ?)',
-      [data.name, data.email, data.phone ?? null]
+      [data.name, data.email, data.phone ?? null],
     );
 
     const customer = await getById(result.insertId);
@@ -43,14 +50,14 @@ export async function createCustomer(data: CreateCustomerInput): Promise<Custome
 export async function getById(id: number): Promise<Customer | null> {
   const [rows] = await pool.execute<CustomerRow[]>(
     'SELECT id, name, email, phone, created_at FROM customers WHERE id = ? LIMIT 1',
-    [id]
+    [id],
   );
   if (rows.length === 0) return null;
   return rowToCustomer(rows[0]);
 }
 
 export async function listCustomers(
-  query: ListCustomersQuery
+  query: ListCustomersQuery,
 ): Promise<{ customers: Customer[]; nextCursor: string | null }> {
   const { search, cursor, limit } = query;
 
@@ -84,7 +91,10 @@ export async function listCustomers(
   return { customers, nextCursor };
 }
 
-export async function updateCustomer(id: number, data: UpdateCustomerInput): Promise<Customer | null> {
+export async function updateCustomer(
+  id: number,
+  data: UpdateCustomerInput,
+): Promise<Customer | null> {
   const current = await getById(id);
   if (!current) return null;
 
@@ -95,7 +105,7 @@ export async function updateCustomer(id: number, data: UpdateCustomerInput): Pro
   try {
     await pool.execute<ResultSetHeader>(
       'UPDATE customers SET name = ?, email = ?, phone = ? WHERE id = ?',
-      [name, email, phone ?? null, id]
+      [name, email, phone ?? null, id],
     );
   } catch (err: unknown) {
     if (isDupEmailError(err)) throw new Error('El email ya existe.');
@@ -106,9 +116,6 @@ export async function updateCustomer(id: number, data: UpdateCustomerInput): Pro
 }
 
 export async function deleteCustomer(id: number): Promise<boolean> {
-  const [result] = await pool.execute<ResultSetHeader>(
-    'DELETE FROM customers WHERE id = ?',
-    [id]
-  );
+  const [result] = await pool.execute<ResultSetHeader>('DELETE FROM customers WHERE id = ?', [id]);
   return result.affectedRows > 0;
 }

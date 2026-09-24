@@ -11,7 +11,11 @@ const asyncWrap =
     Promise.resolve(fn(req, res, next)).catch(next);
 
 class HttpError extends Error {
-  constructor(public status: number, message: string, public details?: unknown) {
+  constructor(
+    public status: number,
+    message: string,
+    public details?: unknown,
+  ) {
     super(message);
   }
 }
@@ -38,7 +42,7 @@ router.post(
       }
       throw err;
     }
-  })
+  }),
 );
 
 router.get(
@@ -49,7 +53,7 @@ router.get(
     const order = await ordersService.getById(id);
     if (!order) throw new HttpError(404, 'Order not found');
     return res.json(order);
-  })
+  }),
 );
 
 router.get(
@@ -58,7 +62,7 @@ router.get(
     const query = parseOrThrow(listOrdersQuerySchema, req.query);
     const { orders, nextCursor } = await ordersService.listOrders(query);
     return res.json({ orders, nextCursor });
-  })
+  }),
 );
 
 router.post(
@@ -79,7 +83,7 @@ router.post(
       }
       throw err;
     }
-  })
+  }),
 );
 
 router.post(
@@ -96,7 +100,7 @@ router.post(
         throw new HttpError(409, err.message);
       throw err;
     }
-  })
+  }),
 );
 
 router.get(
@@ -108,7 +112,7 @@ router.get(
     const order = await ordersService.getOrderByIdempotencyKey(key);
     if (!order) throw new HttpError(404, 'Order not found for this idempotency key');
     return res.json(order);
-  })
+  }),
 );
 
 export default router;
